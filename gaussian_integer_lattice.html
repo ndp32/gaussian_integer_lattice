@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaussian Integer Lattice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 20px;
+        }
+        .controls {
+            margin: 20px;
+        }
+        .zoom-instructions {
+            margin: 10px 0 0 20px;
+            font-size: 12px;
+            color: #555;
+        }
+        .dynamic-legend {
+            margin-top: 20px;
+            font-size: 16px;
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 20px 30px; /* Space between rows and columns */
+            align-items: center;
+            border-left: 1px solid #ddd;
+            padding-left: 10px;
+        }
+        .dynamic-legend .header {
+            font-weight: bold;
+        }
+        .dynamic-legend .header.addition {
+            color: red;
+        }
+        .dynamic-legend .header.multiplication {
+            color: gold;
+        }
+        .dynamic-legend div {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>Gaussian Integer Lattice</h1>
+        <div class="controls">
+            <button id="reset">Reset</button>
+        </div>
+        <canvas id="latticeCanvas" width="600" height="600"></canvas>
+        <div class="zoom-instructions">Zoom: +/- = z/x</div>
+    </div>
+    <div id="dynamicLegend" class="dynamic-legend">
+        <div class="header addition">Addition</div>
+        <div class="header multiplication">Multiplication</div>
+    </div>
+    <script>
+        const canvas = document.getElementById('latticeCanvas');
+        const ctx = canvas.getContext('2d');
+        const dynamicLegend = document.getElementById('dynamicLegend');
+
+        let gridSize = 10; // Defines the number of lattice points around the origin
+        let cellSize = canvas.width / (2 * gridSize); // Size of each cell in the grid
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        let selectedPoints = []; // Stores selected points
+
+        function drawLattice() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid lines
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+
+            for (let x = -gridSize; x <= gridSize; x++) {
+                const px = centerX + x * cellSize;
+                ctx.beginPath();
+                ctx.moveTo(px, 0);
+                ctx.lineTo(px, canvas.height);
+                ctx.stroke();
+
+                const py = centerY - x * cellSize;
+                ctx.beginPath();
+                ctx.moveTo(0, py);
+                ctx.lineTo(canvas.width, py);
+                ctx.stroke();
+            }
+
+            // Draw axis
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, canvas.height);
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvas.width, centerY);
+            ctx.stroke();
+
+            // Draw axis numbers
+            ctx.font = '12px Arial';
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (let x = -gridSize; x <= gridSize; x++) {
+                if (x !== 0) {
+                    // Numbers on the real axis
+                    ctx.fillText(x, centerX + x * cellSize, centerY + 15);
+                    // Numbers on the imaginary axis
+                    ctx.fillText(x, centerX - 15, centerY - x * cellSize);
+                }
+            }
+
+            // Draw points and vectors
+            selectedPoints.forEach(({ point, color }) => {
+                drawPoint(point.lx, point.ly, color);
+            });
+
+            selectedPoints.forEach(({ origin, point, vectorColor }) => {
+                if (origin && point) {
+                    drawVector(origin, point, vectorColor);
+                }
+            });
+        }
+
+        function drawPoint(x, y, color) {
+            const px = centerX + x * cellSize;
+            const py = centerY - y * cellSize;
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(px, py, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawVector(start, end, color) {
+            const startX = centerX + start.lx * cellSize;
+            const startY = centerY - start.ly * cellSize;
+            const endX = centerX + end.lx * cellSize;
+            const endY = centerY - end.ly * cellSize;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        function addLegendRow(p1, p2, sum, product) {
+            const format = ({ lx, ly }, color) =>
+                `<span style="color:${color}">${lx}${ly >= 0 ? "+" : ""}${ly}i</span>`;
+
+            const addition = `${format(p1, "blue")} + ${format(p2, "green")} = ${format(sum, "red")}`;
+            const multiplication = `${format(p1, "blue")} * ${format(p2, "green")} = ${format(product, "gold")}`;
+
+            const additionDiv = document.createElement("div");
+            additionDiv.innerHTML = addition;
+
+            const multiplicationDiv = document.createElement("div");
+            multiplicationDiv.innerHTML = multiplication;
+
+            dynamicLegend.appendChild(additionDiv);
+            dynamicLegend.appendChild(multiplicationDiv);
+        }
+
+        canvas.addEventListener("click", (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const latticePoint = {
+                lx: Math.round((x - centerX) / cellSize),
+                ly: Math.round((centerY - y) / cellSize),
+            };
+
+            if (selectedPoints.length % 2 === 0) {
+                selectedPoints.push({ point: latticePoint, color: "blue" });
+                drawPoint(latticePoint.lx, latticePoint.ly, "blue");
+            } else {
+                const firstPoint = selectedPoints[selectedPoints.length - 1].point;
+                selectedPoints.push({ point: latticePoint, color: "green" });
+
+                const sum = {
+                    lx: firstPoint.lx + latticePoint.lx,
+                    ly: firstPoint.ly + latticePoint.ly,
+                };
+                const product = {
+                    lx: firstPoint.lx * latticePoint.lx - firstPoint.ly * latticePoint.ly,
+                    ly: firstPoint.lx * latticePoint.ly + firstPoint.ly * latticePoint.lx,
+                };
+
+                selectedPoints.push({
+                    point: sum,
+                    color: "red",
+                    origin: firstPoint,
+                    vectorColor: "red",
+                });
+                selectedPoints.push({
+                    point: product,
+                    color: "gold",
+                    origin: firstPoint,
+                    vectorColor: "gold",
+                });
+
+                addLegendRow(firstPoint, latticePoint, sum, product);
+            }
+
+            drawLattice();
+        });
+
+        document.getElementById("reset").addEventListener("click", () => {
+            selectedPoints = [];
+            dynamicLegend.innerHTML = `
+                <div class="header addition">Addition</div>
+                <div class="header multiplication">Multiplication</div>`;
+            drawLattice();
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key.toLowerCase() === "z") {
+                gridSize = Math.max(5, gridSize - 1);
+                cellSize = canvas.width / (2 * gridSize);
+                drawLattice();
+            } else if (event.key.toLowerCase() === "x") {
+                gridSize = Math.min(100, gridSize + 1); // Allow up to ±100 zoom
+                cellSize = canvas.width / (2 * gridSize);
+                drawLattice();
+            }
+        });
+
+        drawLattice();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
