@@ -1,4 +1,4 @@
-# The Gauss
+# ["*The Gauss*"](https://ndp32.github.io/the_gauss/)
 
 This is a simple static website built with HTML, CSS, and Tailwind CSS. It is hosted on GitHub Pages.
 
