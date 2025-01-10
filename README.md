@@ -1,4 +1,4 @@
-# My Static Website
+# The Gauss
 
 This is a simple static website built with HTML, CSS, and Tailwind CSS. It is hosted on GitHub Pages.
 
