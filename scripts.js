@@ -47,3 +47,32 @@ navLinksItems.forEach(link => {
         }
     });
 });
+
+// scripts.js
+
+// Function to load an external HTML file into a specified element
+function loadHTML(elementId, url) {
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Could not fetch ${url}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(data => {
+            document.getElementById(elementId).innerHTML = data;
+            // Optionally, re-attach any event listeners or initialize components after loading
+        })
+        .catch(error => {
+            console.error(`Error loading ${url}:`, error);
+        });
+}
+
+// Load header and footer on DOMContentLoaded
+document.addEventListener("DOMContentLoaded", () => {
+    loadHTML("header", "header.html");
+    loadHTML("footer", "footer.html");
+
+    // Initialize any other scripts or functionalities here
+});
+
